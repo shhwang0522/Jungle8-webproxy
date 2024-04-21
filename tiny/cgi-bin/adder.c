@@ -31,10 +31,11 @@ int main(void)
   printf("Content-type: text/html\r\n\r\n");
 
   // method가 GET일 경우에만 response body 보냄
-  if(strcasecmp(method, "GET") == 0) { 
-    printf("%s", content);
-  }
+
+  printf("%s", content);
+
   fflush(stdout);
 
   exit(0);
+
 }
