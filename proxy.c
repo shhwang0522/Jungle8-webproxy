@@ -17,6 +17,7 @@ static const char *user_agent_key = "User-Agent";
 static const char *proxy_connection_key = "Proxy-Connection";
 static const char *host_key = "Host";
 
+void *thread(void *vargp);
 // commnuication from client to server
 void doit(int connfd);
 // parsing the uri that client requests
@@ -27,32 +28,40 @@ int connect_endServer(char *hostname, int port);
 
 int main(int argc, char **argv)
 {
-    int listenfd, connfd;
+    int listenfd;
+    int *connfd;
     socklen_t  clientlen;
-    char hostname[MAXLINE], port[MAXLINE];
+    char hostname[MAXLINE],port[MAXLINE];
+    pthread_t tid;
+    struct sockaddr_storage clientaddr;
 
-    struct sockaddr_storage clientaddr;/*generic sockaddr struct which is 28 Bytes.The same use as sockaddr*/
-
-    // port number가 argument로 입력되지 않은 경우 error반환
     if(argc != 2){
-        fprintf(stderr,"usage :%s <port> \n",argv[0]);
+        fprintf(stderr, "usage :%s <port> \n", argv[0]);
         exit(1);
     }
 
-    // get listenfd
     listenfd = Open_listenfd(argv[1]);
     while(1) {
         clientlen = sizeof(clientaddr);
-        connfd = Accept(listenfd, (SA *)&clientaddr, &clientlen);
-
-        // hostname과 portnumber string으로 반환
-        Getnameinfo((SA*)&clientaddr, clientlen, hostname, MAXLINE, port, MAXLINE, 0);
+        connfd = Malloc(sizeof(int));
+        *connfd = Accept(listenfd, (SA *)&clientaddr, &clientlen);
+        Getnameinfo((SA*)&clientaddr, clientlen ,hostname, MAXLINE, port, MAXLINE, 0);
         printf("Accepted connection from (%s %s).\n", hostname, port);
-        doit(connfd);
-        Close(connfd);
+        // 자식 프로세스 생성
+        Pthread_create(&tid, NULL, thread, (void *)connfd);
+
     }
     return 0;
 }
+
+void *thread(void *vargp){
+    int connfd = *(int *)vargp;
+    Pthread_detach(pthread_self());
+    Free(vargp);
+    doit(connfd);
+    Close(connfd);
+}
+
 
 void doit(int connfd)
 {
